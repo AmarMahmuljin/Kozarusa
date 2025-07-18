@@ -1,0 +1,13 @@
+# dotenv environment variables file
+.env
+.env.test
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# npm cache directory
+.npm
+
+# Next.js build output
+.next
