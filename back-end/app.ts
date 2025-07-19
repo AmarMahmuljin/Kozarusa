@@ -13,7 +13,7 @@ app.use(cors({ origin: 'http://localhost:8080' }));
 app.use(bodyParser.json());
 
 app.get('/status', (req, res) => {
-    res.json({ message: 'Kozarac API is running...' });
+    res.json({ message: 'kozarusa API is running...' });
 });
 
 const swaggerOpts = {
@@ -30,5 +30,5 @@ const swaggerSpec = swaggerJSDoc(swaggerOpts);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.listen(port || 3000, () => {
-    console.log(`Kozarac API is running on port ${port}.`);
+    console.log(`kozarusa API is running on port ${port}.`);
 });
