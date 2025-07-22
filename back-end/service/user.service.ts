@@ -25,14 +25,14 @@ const getUserByName = async (username: string): Promise<User | null> => {
     return user;
 };
 
-const createUser = async ({ username, firstName, lastName, email, password, role }: UserType): Promise<User> => {
+const createUser = async ({ username, email, password, role }: UserType): Promise<User> => {
     const emailExists = await userRepository.getUserByEmail(email);
     if (emailExists !== null) {
         throw new Error('User with email already exists');
     }
     const encryptedPassword = await encryptor(password);
 
-    const user: UserType = { username, firstName, lastName, email, password: encryptedPassword, role };
+    const user: UserType = { username, email, password: encryptedPassword, role };
     return await userRepository.createUser(user);
 }
 

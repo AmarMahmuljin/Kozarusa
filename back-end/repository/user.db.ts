@@ -49,15 +49,13 @@ const getUserByEmail = async (email: string): Promise<User | null> => {
     }
 };
 
-const createUser = async ({ username, firstName, lastName, email, password, role }: UserType): Promise<User> => {
+const createUser = async ({ username, email, password, role }: UserType): Promise<User> => {
     try {
         // Validate via domain model
-        const validUser = new User({ username, firstName, lastName, email, password, role });
+        const validUser = new User({ username, email, password, role });
         const created = await prisma.user.create({
             data: {
                 username,
-                firstName,
-                lastName,
                 email,
                 password,
                 role: role as Role,
