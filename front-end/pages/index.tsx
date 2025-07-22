@@ -1,5 +1,5 @@
 import Head from 'next/head';
-import Header from '@components/header';
+import Header from '@components/header/header';
 import styles from '@styles/home.module.css';
 
 const Home: React.FC = () => {
@@ -7,7 +7,7 @@ const Home: React.FC = () => {
     <>
       <Head>
         <title>test</title>
-        <meta name="description" content="Courses app" />
+        <meta name="description" content="Kozarusa" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
       <Header />
