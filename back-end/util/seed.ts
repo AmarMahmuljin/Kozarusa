@@ -9,15 +9,36 @@ const prisma = new PrismaClient();
 const main = async () => {
     await prisma.user.deleteMany();
 
-    const admin = await prisma.user.create({
-        data: {
+    const adminPassword = await bcrypt.hash('Admin123!', 12);
+    const userPassword = await bcrypt.hash('User123!', 12);
+    const guestPassword = await bcrypt.hash('Guest123!', 12);
+    await prisma.user.createMany({
+        data: [
+        {
             username: 'admin',
-            password: await bcrypt.hash('admin123', 12),
-            firstName: 'admin',
-            lastName: 'admin',
-            email: 'administration@test.be',
+            firstName: 'Alice',
+            lastName: 'Admin',
+            email: 'admin@example.com',
+            password: adminPassword,
             role: 'admin',
         },
+        {
+            username: 'user',
+            firstName: 'Bob',
+            lastName: 'User',
+            email: 'user@example.com',
+            password: userPassword,
+            role: 'user',
+        },
+        {
+            username: 'guest',
+            firstName: 'Charlie',
+            lastName: 'Guest',
+            email: 'guest@example.com',
+            password: guestPassword,
+            role: 'guest',
+        },
+        ],
     });
 }
 
