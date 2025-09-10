@@ -30,8 +30,6 @@ app.get('/', (req, res) => {
     res.send("Welcome to the Kozarusa API");
 });
 
-// 404
-app.use((_req, res) => res.status(404).json({ message: 'Not found' }));
 
 
 // Error Middleware
@@ -50,6 +48,8 @@ const swaggerOpts = {
 const swaggerSpec = swaggerJSDoc(swaggerOpts);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
+// 404
+app.use((_req, res) => res.status(404).json({ message: 'Not found' }));
 app.listen(port || 3000, () => {
     console.log(`kozarusa API is running on port ${port}.`);
 });
