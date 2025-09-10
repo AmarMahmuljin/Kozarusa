@@ -171,10 +171,15 @@ export class User {
         return {
             id: this.id,
             username: this.username,
+            firstName: this.firstName,
+            lastName: this.lastName,
             email: this.email,
-            role: this.role
+            role :this.role,
+            createdAt :this.createdAt,
+            updatedAt :this.updatedAt,
         };
     }
+
 
     static from({ id, username, firstName, lastName, email, password, role, createdAt, updatedAt }: UserPrisma) {
         return new User( {
