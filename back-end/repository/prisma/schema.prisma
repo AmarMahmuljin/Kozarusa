@@ -8,15 +8,19 @@ datasource db {
 }
 
 enum Role {
-    USER
-    GUEST
-    ADMIN
+    user
+    guest
+    admin
 }
 
 model User {
     id          Int         @id @default(autoincrement())
     username    String      @unique
+    firstName   String
+    lastName    String
     email       String      @unique
     password    String
     role        Role
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt @default(now())
 }

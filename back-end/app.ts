@@ -4,27 +4,38 @@ import cors from 'cors';
 import * as bodyParser from 'body-parser';
 import swaggerJSDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
-import userRouter from './controller/user.routes';
+import { userRouter } from './controller/user.routes';
+import helmet from 'helmet';
+import { config } from './config';
+import morgan from 'morgan';
+import { errorHandler } from './middleware/error';
 
 dotenv.config();
 
 const app = express();
 const port = process.env.APP_PORT || 3000;
 
-// Middleware
-app.use(cors({ origin: 'http://localhost:8080' }));
+app.use(helmet());
+app.use(cors({ origin: config.CORS_ORIGIN ?? true, credentials: true }));
 app.use(express.json());
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined': 'dev'));
+
+// Health
+app.get('/health', (_req, res) => res.status(200).json({ status: 'ok' }));
 
 // Routes
 app.use('/users', userRouter);
 
-app.get('/status', (req, res) => {
-    res.json({ message: 'kozarusa API is running...' });
-});
-
 app.get('/', (req, res) => {
     res.send("Welcome to the Kozarusa API");
 });
+
+// 404
+app.use((_req, res) => res.status(404).json({ message: 'Not found' }));
+
+
+// Error Middleware
+app.use(errorHandler);
 
 const swaggerOpts = {
     definition: {

@@ -1,91 +1,53 @@
-import prisma from './database';
-import { UserType } from '../types/index';
+import database from './database';
 import { User } from '../model/user';
-import { Role } from '@prisma/client';
+
+const SELECT = {
+    id: true,
+    username: true,
+    firstName: true,
+    lastName: true,
+    email: true,
+    password: true,
+    role: true,
+    createdAt: true,
+    updatedAt: true,
+};
 
 const getAllUsers = async (): Promise<User[]> => {
-    try {
-        const usersPrisma = await prisma.user.findMany({});
-        return usersPrisma.map((userPrisma: any) => User.from(userPrisma));
-    } catch(err) {
-        console.error('Error fetching users:', err);
-        throw new Error('Failed to fetch users');
-    }
+    const usersPrisma = await database.user.findMany({ select: SELECT });
+    return usersPrisma.map(User.from);
 };
 
-const getUserById = async (id: number): Promise<User | null> => {
-    try {
-        const userPrisma = await prisma.user.findUnique({
-            where: { id: id },
-        });
-        return userPrisma ? User.from(userPrisma) : null;
-    } catch(err) {
-        console.error(`Error fetching user with id ${id}: `, err);
-        throw new Error('Failed to fetch user');
-    }
+const getUserByUsername = async ({ username }: {username: string}): Promise<User | null> => {
+    const userPrisma = await database.user.findFirst({ where: { username }, select: SELECT });
+    return userPrisma ? User.from(userPrisma) : null;
 };
 
-const getUserByName = async (username: string): Promise<User | null> => {
-    try {
-        const userPrisma = await prisma.user.findUnique({
-            where: { username },
-        });
-        return userPrisma ? User.from(userPrisma) : null;
-    } catch(err) {
-        console.error(`Error fetching user with name ${name}:`, err);
-        throw new Error(`Failed to fetch user by name`);
-    }
-};
+const getUserByEmail = async ({ email }: { email: string }): Promise<User | null> => {
+    const userPrisma = await database.user.findFirst({ where: { email }, select: SELECT });
+    return userPrisma ? User.from(userPrisma) : null;
+}
 
-const getUserByEmail = async (email: string): Promise<User | null> => {
-    try {
-        const userPrisma = await prisma.user.findUnique({
-            where: { email },
-        });
-        return userPrisma ? User.from(userPrisma) : null;
-    } catch(err) {
-        console.error(`Error fetching user with email ${email}:`, err);
-        throw new Error('Failed to fetch user by email');
-    }
-};
-
-const createUser = async ({ username, email, password, role }: UserType): Promise<User> => {
-    try {
-        // Validate via domain model
-        const validUser = new User({ username, email, password, role });
-        const created = await prisma.user.create({
-            data: {
-                username,
-                email,
-                password,
-                role: role as Role,
-            }
-        });
-        return User.from(created);
-    } catch (err) {
-        console.error(`Error creating user:`, err);
-        throw new Error('Failed to created user');
-    }
-};
-
-const deleteUser = async (id: number): Promise<void> => {
-    try {
-        await prisma.user.delete({
-            where: { id },
-        });
-    } catch(err) {
-        console.error(`Error deleting uerser with id ${id}:`, err);
-        throw new Error('Failed to delete user');
-    }
+const createUser = async (user: User): Promise<User> => {
+    const userPrisma = await database.user.create({
+        data: {
+            username: user.getUsername(),
+            password: user.getPassword(),
+            firstName: user.getFirstName(),
+            lastName: user.getLastName(),
+            email: user.getEmail(),
+            role: user.getRole(),
+        },
+        select: SELECT,
+    });
+    return User.from(userPrisma);
 };
 
 const userRepository = {
     getAllUsers,
-    getUserById,
-    getUserByName,
+    getUserByUsername,
     getUserByEmail,
     createUser,
-    deleteUser,
-}
+};
 
 export default userRepository;

@@ -1,54 +1,43 @@
+import bcrypt from 'bcrypt';
 import { User } from '../model/user';
-import { UserType} from '../types';
-import encryptor from '../helpers/encryptor';
-import decryptor from '../helpers/decryptor';
 import userRepository from '../repository/user.db';
-
+import { AuthenticationResponse, UserInput } from '../types';
+import { generateJwtToken } from '../util/jwt';
+import { AppError } from '../errors/AppError';
+import { config } from '../config';
 
 const getAllUsers = async (): Promise<User[]> => {
     return await userRepository.getAllUsers();
 };
 
-const getUserById = async(id: number): Promise<User | null> => {
-    const user = await userRepository.getUserById(id);
-    if (!user) {
-        throw new Error('User not found');
-    }
-    return user;
+const authenticate = async ({ username, password }: Pick<UserInput, 'username' | 'password'>): Promise<AuthenticationResponse> => {
+    const user = await userRepository.getUserByUsername({ username });
+
+    const fallbackHash = '$2b$12$Ck3sX9jD2p3h8UuJjv8bduRkq1Y0n1Trm4k1Y0n1Trm4k1Y0n1Trm';
+    const ok = await bcrypt.compare(password, user?.getPassword() ?? fallbackHash);
+
+    if (!user || !ok) throw new AppError(401, 'Invalid credentials');
+
+    const token = generateJwtToken({ userId: user.getId()!, username: user.getUsername(), role: user.getRole() });
+    return { token, username: user.getUsername(), fullname: `${user.getFirstName()} ${user.getLastName()}`, role: user.getRole() };
 };
 
-const getUserByName = async (username: string): Promise<User | null> => {
-    const user = await userRepository.getUserByName(username);
-    if (!user) {
-        throw new Error('User not found by name');
-    }
-    return user;
-};
+const createUser = async (input : UserInput): Promise<User> => {
+    const [byUsername, byEmail] = await Promise.all([
+        userRepository.getUserByUsername({ username: input.username }),
+        userRepository.getUserByEmail({ email: input.email }),
+    ])
 
-const createUser = async ({ username, email, password, role }: UserType): Promise<User> => {
-    const emailExists = await userRepository.getUserByEmail(email);
-    if (emailExists !== null) {
-        throw new Error('User with email already exists');
-    }
-    const encryptedPassword = await encryptor(password);
-
-    const user: UserType = { username, email, password: encryptedPassword, role };
-    return await userRepository.createUser(user);
+    if (byUsername) throw new AppError(409, 'Username already in use');
+    if (byEmail) throw new AppError(409, 'Email already in use');
+    
+    const hashed = await bcrypt.hash(input.password, config.BCRYPT_ROUNDS);
+    const user = new User({ ...input, password: hashed });
+    return userRepository.createUser(user);
 }
 
-const deleteUser = async (id: number): Promise<void> => {
-    const existingUser = await userRepository.getUserById(id);
-    if (!existingUser) {
-        throw new Error('User not found');
-    }
-
-    await userRepository.deleteUser(id);
-};
-
-export {
+export default {
     getAllUsers,
-    getUserById,
-    getUserByName,
+    authenticate,
     createUser,
-    deleteUser,
-}
+};

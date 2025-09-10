@@ -1,72 +1,175 @@
-import express, { Request, Response } from 'express';
-import * as userService from '../service/user.service';
-import { UserType } from '../types';
+/**
+ * @swagger
+ * tags:
+ *   - name: Users
+ *     description: User management & authentication
+ * 
+ * components:
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ * 
+ *   schemas:
+ *     Error:
+ *       type: object
+ *       properties:
+ *         message:
+ *           type: string
+ *       example:
+ *         message: Something went wrong
+ * 
+ *     Role:
+ *       type: string
+ *       enum: [user, admin, guest]
+ * 
+ *     AuthenticationRequest:
+ *       type: object
+ *       required: [username, password]
+ *       properties:
+ *         username:
+ *           type: string
+ *           description: Username
+ *         password:
+ *           type: string
+ *           format: password
+ *           description: Password
+ * 
+ *     AuthenticationResponse:
+ *       type: object
+ *       properties:
+ *         message: 
+ *           type: string
+ *         token:
+ *           type: string
+ *         username:
+ *           type: string
+ *         fullname:
+ *           type: string
+ * 
+ *     User:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           format: int64
+ *         username:
+ *           type: string
+ *         firstName:
+ *           type: string
+ *         lastName:
+ *           type: string
+ *         email:
+ *           type: string
+ *           format: email
+ *         role:
+ *           $ref: '#/components/schemas/Role'
+ * 
+ *     UserInput:
+ *       type: object
+ *       required: [username, password, firstName, lastName, email, role]
+ *       properties:
+ *         username:
+ *           type: string
+ *         password:
+ *           type: string
+ *           format: password
+ *           writeOnly: true
+ *         firstName:
+ *           type: string
+ *         lastName:
+ *           type: string
+ *         email:
+ *           type: string
+ *           format: email
+ *         role:
+ *          $ref: '#/components/schemas/Role'
+ */
+import express, { NextFunction, Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
+import userService from '../service/user.service';
+import { validate } from '../middleware/validate';
+import { authRequestSchema, userInputSchema } from '../validation/user.schemas';
+import { requireAuth, requireRole } from '../middleware/auth';
 
-const router = express.Router();
+const userRouter = express.Router();
 
-router.get('/', async (req: Request, res: Response) => {
+const loginLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+/**
+ * @swagger
+ * /users:
+ *   get:
+ *     tags: [Users]
+ *     summary: Get a list of all users
+ *     responses:
+ *       200:
+ *         description: List of users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Missing or invalid token
+ */
+userRouter.get('/', requireAuth, requireRole(['admin']), async (_req: Request, res: Response, next: NextFunction) => {
     try {
         const users = await userService.getAllUsers();
-        res.status(200).json(users.map(user => user.toDTO()));
-    } catch(err) {
-        const error = err as Error;
-        res.status(500).json({ message: error.message });
+        res.status(200).json(users.map(u => u.toDTO()));
+    } catch(error) {
+        next(error); 
     }
 });
 
-router.get('/id/:id', async(req: Request, res: Response) => {
-    const { id } = req.params;
+/**
+ * @swagger
+ * /users/login:
+ *   post:
+ *     tags: [Users]
+ *     summary: Authenticate a user and recieve a JWT
+ *     requestBody:
+ *       required: true
+ *       content: 
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/AuthenticationRequest'
+ *     responses:
+ *       200:
+ *         description: Authentication successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthenticationResponse'
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Invalid credentials
+ */
+userRouter.post('/login', rateLimit, validate(authRequestSchema), async(req: Request, res: Response, next: NextFunction) => {
     try {
-        const user = await userService.getUserById(Number(id));
-        res.status(200).json(user?.toDTO());
-    } catch (err) {
-        const error = err as Error;
-        res.status(500).json({ message: error.message }); 
+        const response = await userService.authenticate(req.body);
+        res.status(200).json({ message: 'Authentication successful', ...response });
+    } catch (error) {
+        next(error);
     }
 });
 
-router.get('/username/:username', async(req: Request, res: Response) => {
-    const { username } = req.params;
+userRouter.post('/signup', validate(userInputSchema), async(req: Request, res: Response, next: NextFunction) => {
     try {
-        const user = await userService.getUserByName(String(username));
-        res.status(200).json(user?.toDTO());
-    } catch (err) {
-        const error = err as Error;
-        res.status(500).json({ message: error.message });
+        const user = await userService.createUser(req.body);
+        res.status(201).json(user.toDTO());
+    } catch (error) {
+        next(error);
     }
 });
 
-router.post('/register', async(req: Request, res: Response) => {
-    try {
-        const user = <UserType>req.body;
-        const newUser = await userService.createUser(user);
-        res.status(200).json(newUser.toDTO());
-    } catch(err) {
-        const error = err as Error;
-        res.status(500).json({ message: error.message });
-    }
-});
 
-router.post('/login', async(req: Request, res: Response) => {
-    try {
-        const { email, password } = req.body;
-        
-        // implement login logic
-    } catch(err) {
-        const error = err as Error;
-        res.status(500).json({ message: error.message });
-    }
-});
-
-router.delete('/:id', async (req: Request, res: Response) => {
-    const { id } = req.params;
-    try {
-        await userService.deleteUser(Number(id));
-        res.status(200).json({ message: 'User deleted successfully' });
-    } catch(err) {
-        const error = err as Error;
-        res.status(500).json({ message: error.message });
-    }
-});
-
-export default router;
+export { userRouter };
