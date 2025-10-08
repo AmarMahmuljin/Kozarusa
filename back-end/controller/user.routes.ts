@@ -53,7 +53,7 @@
  *         fullname:
  *           type: string
  *         role:
- *           #ref: '#/components/schemas/Role'
+ *           $ref: '#/components/schemas/Role'
  *       example:
  *         message: Authentication successful
  *         token: ezaiuhIHUEZAZEBfiefzebf5ezfqefze864...

@@ -15,7 +15,7 @@ export const requireAuth = (req: AuthRequest, _res: Response, next: NextFunction
         req.user = verifyJwt(token);
         next();
     } catch (error) {
-        next(new AppError(401, 'Invalid tolen'));
+        next(new AppError(401, 'Invalid token'));
     }
 };
 
