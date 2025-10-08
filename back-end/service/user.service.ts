@@ -6,10 +6,19 @@ import { generateJwtToken } from '../util/jwt';
 import { AppError } from '../errors/AppError';
 import { config } from '../config';
 
+/**
+ * Retrieve all users from the repository.
+ * Returns an array of domain User object.
+ */
 const getAllUsers = async (): Promise<User[]> => {
     return await userRepository.getAllUsers();
 };
 
+/**
+ * Authenticate a user by username and password. 
+ * Performs a constant-time comparison using a fallback hash to mitigate timming attacks.
+ * Returns a JWT and user metadata on success.
+ */
 const authenticate = async ({ username, password }: Pick<UserInput, 'username' | 'password'>): Promise<AuthenticationResponse> => {
     const user = await userRepository.getUserByUsername({ username });
 
@@ -22,6 +31,12 @@ const authenticate = async ({ username, password }: Pick<UserInput, 'username' |
     return { token, username: user.getUsername(), fullname: `${user.getFirstName()} ${user.getLastName()}`, role: user.getRole() };
 };
 
+/**
+ * Create a new user. 
+ * Duplicates are checked by username and email.
+ * The password is hashed using bcript and a default role of `user` is enforced 
+ * regardless of any role specified in the input to prevent privilege escalation during registration.
+ */
 const createUser = async (input : UserInput): Promise<User> => {
     const [byUsername, byEmail] = await Promise.all([
         userRepository.getUserByUsername({ username: input.username }),
@@ -32,7 +47,7 @@ const createUser = async (input : UserInput): Promise<User> => {
     if (byEmail) throw new AppError(409, 'Email already in use');
     
     const hashed = await bcrypt.hash(input.password, config.BCRYPT_ROUNDS);
-    const user = new User({ ...input, password: hashed });
+    const user = new User({ ...input, role: 'user', password: hashed });
     return userRepository.createUser(user);
 }
 

@@ -16,7 +16,14 @@ const app = express();
 const port = process.env.APP_PORT || 3000;
 
 app.use(helmet());
-app.use(cors({ origin: config.CORS_ORIGIN ?? true, credentials: true }));
+
+const allowedOrigins = config.CORS_ORIGIN ? config.CORS_ORIGIN.split(',').map(o => o.trim()) : [];
+const corsOptions: cors.CorsOptions = {
+    origin: allowedOrigins.length > 0 ? allowedOrigins : false,
+    credentials: true,
+};
+app.use(cors(corsOptions));
+
 app.use(express.json());
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined': 'dev'));
 
